@@ -1,8 +1,4 @@
 '''
-작성자 : 정성민
-작성일: 2024-01-02
-수정일: 2025-01-17
-
 reverse → base64decode → zlib decompress cycle loop
 exec((_)(b'encoded_data'))' 
 '''
@@ -12,7 +8,6 @@ import zlib
 import base64
 import re
 
-# 유효한 Base64 데이터인지 확인하는 함수
 def is_valid_base64(data):
     try:
         base64.b64decode(data, validate=True)
@@ -20,11 +15,9 @@ def is_valid_base64(data):
     except Exception:
         return False
 
-# Base64 패딩 문제를 해결하는 함수
 def fix_base64_padding(data):
     return data + b'=' * (-len(data) % 4)
 
-# 복호화 함수
 def recursive_decode(encoded_data, max_depth=0):
     current_layer = encoded_data
     depth = 0
@@ -34,7 +27,6 @@ def recursive_decode(encoded_data, max_depth=0):
             if isinstance(current_layer, bytes):
                 current_layer = current_layer.decode('utf-8')
 
-            # 1. exec((_)(b'[encoded_data]')) 패턴 처리
             match = re.search(r"exec\(\(\_\)\(b'(.*?)'\)\)", current_layer)
             if match:
                 encoded_inner_data = match.group(1).encode('utf-8')
@@ -43,27 +35,22 @@ def recursive_decode(encoded_data, max_depth=0):
                 print(f"[INFO] 복호화 완료. current_depth:{depth}")
                 return current_layer
 
-            # 2. 역순 뒤집기
             reversed_data = current_layer[::-1]
 
-            # 3. Base64 유효성 검사 및 디코딩
             if is_valid_base64(reversed_data):
                 decoded_data = base64.b64decode(fix_base64_padding(reversed_data))
             else:
                 print(f"[INFO] Base64 유효하지 않음 (Layer {depth}), 복호화 중단.")
                 return current_layer
 
-            # 4. zlib 압축 해제
             try:
                 decompressed_data = zlib.decompress(decoded_data).decode('utf-8')
             except zlib.error as e:
                 print(f"[INFO] zlib 디컴프레션 실패 (Layer {depth}): {e}")
                 return current_layer
 
-            # 복호화 결과 출력
             print(f"[Layer {depth}] 복호화 결과:\n{decompressed_data}\n")
 
-            # 복호화 결과를 다음 레이어로 설정
             current_layer = decompressed_data
             depth += 1  
 
